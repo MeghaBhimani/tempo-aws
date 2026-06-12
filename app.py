@@ -1,12 +1,14 @@
 import os
 import re
 import logging
+import traceback
 from functools import wraps
 
 from dotenv import load_dotenv
 load_dotenv()
 
 import boto3
+import bcrypt
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key, Attr
 from flask import Flask, render_template, request, redirect, session, jsonify, url_for
@@ -23,6 +25,7 @@ CORS(app, origins=os.environ.get("ALLOWED_ORIGIN", "*"), supports_credentials=Tr
 
 # ── AWS config ────────────────────────────────────────────────────────────────
 REGION           = os.environ.get("AWS_REGION", "ap-southeast-2")
+CLOUDFRONT_DOMAIN = os.environ.get("CLOUDFRONT_DOMAIN", "")  # e.g. d1234abcdef.cloudfront.net
 
 dynamodb  = boto3.resource("dynamodb", region_name=REGION)
 
@@ -35,7 +38,28 @@ EMAIL_RE = re.compile(r'^[^@]+@[^@]+\.[^@]+$')
 
 def valid_email(email: str) -> bool:
     return bool(EMAIL_RE.match(email))
-                              # fallback: return key as-is
+
+# ── Image URL helper ──────────────────────────────────────────────────────────
+def _image_url(raw_url: str) -> str:
+    """
+    Return the correct public URL for an image stored in our private S3 bucket.
+
+    Images are served via CloudFront (not presigned URLs):
+      - S3 bucket stays private — no public access policy needed
+      - CloudFront has Origin Access Control (OAC) permission to read from S3
+      - CloudFront URLs are permanent; they never expire
+      - No backend call required per request — just string construction
+
+    If the stored value is already a full URL (https://...), pass it through.
+    If it is a bare S3 key (e.g. artwork/artist/album.jpg), prepend CloudFront domain.
+    """
+    if not raw_url:
+        return raw_url
+    if raw_url.startswith("http"):
+        return raw_url                             # already a full URL
+    if CLOUDFRONT_DOMAIN:
+        return f"https://{CLOUDFRONT_DOMAIN}/{raw_url.lstrip('/')}"
+    return raw_url                                 # fallback: return key as-is
 
 # ── Auth decorator ────────────────────────────────────────────────────────────
 def login_required(f):
@@ -80,8 +104,12 @@ def login():
         return render_template("login.html", error="Email or password is invalid")
 
     stored_pw = user.get("password", "")
+    try:
+        password_ok = bcrypt.checkpw(password.encode("utf-8"), stored_pw.encode("utf-8"))
+    except Exception:
+        password_ok = (stored_pw == password)   # legacy fallback
 
-    if not stored_pw:
+    if not password_ok:
         return render_template("login.html", error="Email or password is invalid")
 
     session["email"]     = email
@@ -112,10 +140,12 @@ def register():
         if "Item" in existing:
             return render_template("register.html", error="Email already exists")
 
+        hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
         login_tbl.put_item(Item={
             "email":     email,
             "user_name": user_name,
-            "password":  password,
+            "password":  hashed,
         })
         return redirect(url_for("login"))
 
@@ -148,6 +178,9 @@ def get_subscriptions():
     try:
         result = subs_tbl.query(KeyConditionExpression=Key("emailId").eq(email))
         items  = result.get("Items", [])
+        for item in items:
+            if "image_url" in item:
+                item["image_url"] = _image_url(item["image_url"])
         return jsonify({"items": items})
     except ClientError as e:
         log.error("DynamoDB error on subscriptions: %s", e)
@@ -268,6 +301,22 @@ def unsubscribe():
 @app.route("/health")
 def health():
     return jsonify({"status": "ok"}), 200
+
+
+# ── Global error handlers ─────────────────────────────────────────────────────
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    log.error("Unhandled exception: %s", traceback.format_exc())
+    return jsonify({"error": "Internal server error"}), 500
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"error": "Not found"}), 404
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    return jsonify({"error": "Method not allowed"}), 405
 
 
 if __name__ == "__main__":
