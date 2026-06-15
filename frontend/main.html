@@ -499,26 +499,12 @@
     let currentEmail    = sessionStorage.getItem("email");
     let currentUserName = sessionStorage.getItem("user_name");
 
-    (async () => {
-      if (!currentEmail) {
-        window.location.href = "login.html";
-        return;
-      }
-      try {
-        const r = await fetch(`${API_BASE}`);
-        if (!r.ok) {
-          sessionStorage.clear();
-          window.location.href = "login.html";
-          return;
-        }
-        const me = await r.json();
-        currentUserName = me.user_name;
-        sessionStorage.setItem("user_name", currentUserName);
-      } catch (_) {
-        // Network issue — trust sessionStorage
-      }
+    // Auth guard — trust sessionStorage
+    if (!currentEmail) {
+      window.location.href = "login.html";
+    } else {
       document.getElementById("sidebarUser").textContent = currentUserName || currentEmail;
-    })();
+    }
 
     // ── Subscriptions set (for subscribe button state) ────────
     let subscribedKeys = new Set();

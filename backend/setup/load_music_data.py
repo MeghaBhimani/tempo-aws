@@ -84,7 +84,7 @@ def load():
                 "title":       title,
                 "album":       album,
                 "year":        year,
-                "image_url":   image_url,
+                "img_url":   image_url,
             })
             total += 1
             print(f"  ✓ {title} — {artist} ({year})")

@@ -239,7 +239,7 @@
     // If already logged in, skip to main
     (async () => {
       try {
-        const r = await fetch(`${API_BASE}/api/me`, { credentials: "include" });
+        const r = await fetch(`${API_BASE}/api/me`);
         if (r.ok) window.location.href = "main.html";
       } catch (_) {}
     })();
@@ -274,10 +274,9 @@
 
       try {
         const res = await fetch(`${API_BASE}/api/login`, {
-          method:      "POST",
-          credentials: "include",
-          headers:     { "Content-Type": "application/json" },
-          body:        JSON.stringify({ email, password }),
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ email, password }),
         });
 
         const data = await res.json();
