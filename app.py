@@ -11,7 +11,7 @@ import boto3
 import bcrypt
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key, Attr
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -27,6 +27,9 @@ CORS(app, origins="*")
 # ── AWS config ────────────────────────────────────────────────────────────────
 REGION = os.environ.get("AWS_REGION", "us-east-1")
 
+S3_BUCKET = os.environ.get("S3_BUCKET", "")
+s3_client = boto3.client("s3", region_name=REGION)
+
 dynamodb  = boto3.resource("dynamodb", region_name=REGION)
 login_tbl = dynamodb.Table("Login")
 music_tbl = dynamodb.Table("Music")
@@ -40,9 +43,30 @@ def valid_email(email: str) -> bool:
 
 # ── Image URL helper ──────────────────────────────────────────────────────────
 def _image_url(raw_url: str) -> str:
-    """Return image URL as stored — iTunes URLs are passed through unchanged."""
-    return raw_url or ""
+    if not raw_url:
+        return ""
+    # Rewrite S3 bucket URLs → backend proxy (avoids account-level BPA)
+    if f"{S3_BUCKET}.s3." in raw_url and "/artwork/" in raw_url:
+        key = "artwork/" + raw_url.split("/artwork/", 1)[1]
+        return f"/api/image?key={key}"
+    return raw_url
 
+
+@app.route("/api/image")
+def proxy_image():
+    key = request.args.get("key", "").strip()
+    if not key or not key.startswith("artwork/"):
+        return jsonify({"error": "invalid key"}), 400
+    try:
+        obj = s3_client.get_object(Bucket=S3_BUCKET, Key=key)
+        return Response(
+            obj["Body"].read(),
+            content_type=obj["ContentType"],
+            headers={"Cache-Control": "public, max-age=31536000"},
+        )
+    except ClientError:
+        return "", 404
+    
 # ═══════════════════════════════════════════════════════════════════════════════
 # Auth API
 # ═══════════════════════════════════════════════════════════════════════════════
