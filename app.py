@@ -266,6 +266,32 @@ def unsubscribe():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Image proxy  (streams S3 artwork through EC2 — avoids account-level BPA)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+s3_client = boto3.client("s3", region_name=REGION)
+
+@app.route("/api/image")
+def proxy_image():
+    key = request.args.get("key", "").strip()
+    if not key or not key.startswith("artwork/"):
+        return jsonify({"error": "invalid key"}), 400
+    if not S3_BUCKET:
+        return jsonify({"error": "S3_BUCKET not configured"}), 500
+    try:
+        from flask import Response
+        obj = s3_client.get_object(Bucket=S3_BUCKET, Key=key)
+        return Response(
+            obj["Body"].read(),
+            content_type=obj.get("ContentType", "image/jpeg"),
+            headers={"Cache-Control": "public, max-age=31536000"},
+        )
+    except ClientError as e:
+        log.error("S3 proxy error for key=%s: %s", key, e)
+        return "", 404
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Health check
 # ═══════════════════════════════════════════════════════════════════════════════
 
