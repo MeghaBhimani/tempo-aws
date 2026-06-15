@@ -11,7 +11,7 @@ import boto3
 import bcrypt
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key, Attr
-from flask import Flask, render_template, request, redirect, session, jsonify, url_for
+from flask import Flask, request, session, jsonify
 from flask_cors import CORS
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -19,21 +19,24 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 # ── App setup ─────────────────────────────────────────────────────────────────
-app = Flask(__name__, template_folder="frontend")
+app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", "tempo")
-CORS(app, origins=os.environ.get("ALLOWED_ORIGIN", "*"), supports_credentials=True)
+
+CORS(
+    app,
+    origins=os.environ.get("ALLOWED_ORIGIN", "*"),
+    supports_credentials=True,
+)
 
 # ── AWS config ────────────────────────────────────────────────────────────────
-REGION           = os.environ.get("AWS_REGION", "ap-southeast-2")
-CLOUDFRONT_DOMAIN = os.environ.get("CLOUDFRONT_DOMAIN", "")  # e.g. d1234abcdef.cloudfront.net
+REGION = os.environ.get("AWS_REGION", "us-east-1")
 
 dynamodb  = boto3.resource("dynamodb", region_name=REGION)
-
 login_tbl = dynamodb.Table("Login")
 music_tbl = dynamodb.Table("Music")
 subs_tbl  = dynamodb.Table("Subscription")
 
-# ── Input validation ──────────────────────────────────────────────────────────
+# ── Validation ────────────────────────────────────────────────────────────────
 EMAIL_RE = re.compile(r'^[^@]+@[^@]+\.[^@]+$')
 
 def valid_email(email: str) -> bool:
@@ -41,151 +44,110 @@ def valid_email(email: str) -> bool:
 
 # ── Image URL helper ──────────────────────────────────────────────────────────
 def _image_url(raw_url: str) -> str:
-    """
-    Return the correct public URL for an image stored in our private S3 bucket.
+    """Return image URL as stored — iTunes URLs are passed through unchanged."""
+    return raw_url or ""
 
-    Images are served via CloudFront (not presigned URLs):
-      - S3 bucket stays private — no public access policy needed
-      - CloudFront has Origin Access Control (OAC) permission to read from S3
-      - CloudFront URLs are permanent; they never expire
-      - No backend call required per request — just string construction
-
-    If the stored value is already a full URL (https://...), pass it through.
-    If it is a bare S3 key (e.g. artwork/artist/album.jpg), prepend CloudFront domain.
-    """
-    if not raw_url:
-        return raw_url
-    if raw_url.startswith("http"):
-        return raw_url                             # already a full URL
-    if CLOUDFRONT_DOMAIN:
-        return f"https://{CLOUDFRONT_DOMAIN}/{raw_url.lstrip('/')}"
-    return raw_url                                 # fallback: return key as-is
-
-# ── Auth decorator ────────────────────────────────────────────────────────────
+# ── Auth decorator (returns 401 JSON — no redirect) ───────────────────────────
 def login_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         if "email" not in session:
-            return redirect(url_for("login"))
+            return jsonify({"error": "unauthorized"}), 401
         return f(*args, **kwargs)
     return wrapper
 
-# ── Page routes ───────────────────────────────────────────────────────────────
 
-@app.route("/")
-def index():
-    return redirect(url_for("login"))
+# ═══════════════════════════════════════════════════════════════════════════════
+# Auth API
+# ═══════════════════════════════════════════════════════════════════════════════
 
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "GET":
-        if "email" in session:
-            return redirect(url_for("main"))
-        return render_template("login.html", error="")
-
-    email    = request.form.get("email",    "").strip()
-    password = request.form.get("password", "").strip()
+@app.route("/api/login", methods=["POST"])
+def api_login():
+    data     = request.get_json() or {}
+    email    = data.get("email",    "").strip()
+    password = data.get("password", "").strip()
 
     if not email or not password:
-        return render_template("login.html", error="Email and password are required")
+        return jsonify({"error": "Email and password are required"}), 400
 
     if not valid_email(email):
-        return render_template("login.html", error="Invalid email format")
+        return jsonify({"error": "Invalid email format"}), 400
 
     try:
         resp = login_tbl.get_item(Key={"email": email})
     except ClientError as e:
-        log.error("DynamoDB error on login: %s", e)
-        return render_template("login.html", error="Database error. Try again.")
+        log.error("DynamoDB login error: %s", e)
+        return jsonify({"error": "Database error. Try again."}), 500
 
     user = resp.get("Item")
     if not user:
-        return render_template("login.html", error="Email or password is invalid")
+        return jsonify({"error": "Email or password is invalid"}), 401
 
     stored_pw = user.get("password", "")
     try:
         password_ok = bcrypt.checkpw(password.encode("utf-8"), stored_pw.encode("utf-8"))
     except Exception:
-        password_ok = (stored_pw == password)   # legacy fallback
+        password_ok = (stored_pw == password)   # legacy plaintext fallback
 
     if not password_ok:
-        return render_template("login.html", error="Email or password is invalid")
+        return jsonify({"error": "Email or password is invalid"}), 401
 
     session["email"]     = email
     session["user_name"] = user.get("user_name", email)
-    return redirect(url_for("main"))
+    return jsonify({"success": True, "email": email, "user_name": session["user_name"]}), 200
 
 
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    if request.method == "GET":
-        return render_template("register.html", error="")
-
-    email     = request.form.get("email",     "").strip()
-    user_name = request.form.get("user_name", "").strip()
-    password  = request.form.get("password",  "").strip()
+@app.route("/api/register", methods=["POST"])
+def api_register():
+    data      = request.get_json() or {}
+    email     = data.get("email",     "").strip()
+    user_name = data.get("user_name", "").strip()
+    password  = data.get("password",  "").strip()
 
     if not email or not user_name or not password:
-        return render_template("register.html", error="All fields are required")
+        return jsonify({"error": "All fields are required"}), 400
 
     if not valid_email(email):
-        return render_template("register.html", error="Invalid email format")
+        return jsonify({"error": "Invalid email format"}), 400
 
     if len(password) < 6:
-        return render_template("register.html", error="Password must be at least 6 characters")
+        return jsonify({"error": "Password must be at least 6 characters"}), 400
 
     try:
         existing = login_tbl.get_item(Key={"email": email})
         if "Item" in existing:
-            return render_template("register.html", error="Email already exists")
+            return jsonify({"error": "Email already registered"}), 409
 
         hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
         login_tbl.put_item(Item={
             "email":     email,
             "user_name": user_name,
             "password":  hashed,
         })
-        return redirect(url_for("login"))
+        return jsonify({"success": True}), 201
 
     except ClientError as e:
-        log.error("DynamoDB error on register: %s", e)
-        return render_template("register.html", error="Database error: " + e.response["Error"]["Message"])
+        log.error("DynamoDB register error: %s", e)
+        return jsonify({"error": "Database error: " + e.response["Error"]["Message"]}), 500
 
 
-@app.route("/main")
-@login_required
-def main():
-    return render_template("main.html",
-        user_name=session["user_name"],
-        email=session["email"],
-    )
-
-
-@app.route("/logout")
-def logout():
+@app.route("/api/logout", methods=["POST"])
+def api_logout():
     session.clear()
-    return redirect(url_for("login"))
+    return jsonify({"success": True}), 200
 
 
-# ── API routes ────────────────────────────────────────────────────────────────
+@app.route("/api/me", methods=["GET"])
+def api_me():
+    """Check if the current session is authenticated."""
+    if "email" not in session:
+        return jsonify({"error": "unauthorized"}), 401
+    return jsonify({"email": session["email"], "user_name": session["user_name"]}), 200
 
-@app.route("/api/subscriptions", methods=["GET"])
-@login_required
-def get_subscriptions():
-    email = session["email"]
-    try:
-        result = subs_tbl.query(KeyConditionExpression=Key("emailId").eq(email))
-        items  = result.get("Items", [])
-        for item in items:
-            if "image_url" in item:
-                item["image_url"] = _image_url(item["image_url"])
-        return jsonify({"items": items})
-    except ClientError as e:
-        log.error("DynamoDB error on subscriptions: %s", e)
-        return jsonify({"error": str(e)}), 500
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Music API
+# ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/api/query", methods=["GET"])
 @login_required
@@ -207,6 +169,7 @@ def query_music():
 
     try:
         if artist and not title and not year and not album:
+            # Efficient key-based query on partition key
             result = music_tbl.query(KeyConditionExpression=Key("artist").eq(artist))
             items  = result.get("Items", [])
             while "LastEvaluatedKey" in result:
@@ -217,10 +180,10 @@ def query_music():
                 items.extend(result.get("Items", []))
         else:
             conditions = []
-            if title:            conditions.append(Attr("title").eq(title))
-            if artist:           conditions.append(Attr("artist").eq(artist))
+            if title:                conditions.append(Attr("title").eq(title))
+            if artist:               conditions.append(Attr("artist").eq(artist))
             if year_val is not None: conditions.append(Attr("year").eq(year_val))
-            if album:            conditions.append(Attr("album").eq(album))
+            if album:                conditions.append(Attr("album").eq(album))
 
             filter_expr = conditions[0]
             for c in conditions[1:]:
@@ -238,11 +201,34 @@ def query_music():
         for item in items:
             if "image_url" in item:
                 item["image_url"] = _image_url(item["image_url"])
+            # Normalise legacy img_url field
+            if "img_url" in item and "image_url" not in item:
+                item["image_url"] = _image_url(item.pop("img_url"))
 
         return jsonify({"items": items})
 
     except ClientError as e:
-        log.error("DynamoDB error on query: %s", e)
+        log.error("DynamoDB query error: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Subscriptions API
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/subscriptions", methods=["GET"])
+@login_required
+def get_subscriptions():
+    email = session["email"]
+    try:
+        result = subs_tbl.query(KeyConditionExpression=Key("emailId").eq(email))
+        items  = result.get("Items", [])
+        for item in items:
+            if "image_url" in item:
+                item["image_url"] = _image_url(item["image_url"])
+        return jsonify({"items": items})
+    except ClientError as e:
+        log.error("DynamoDB subscriptions error: %s", e)
         return jsonify({"error": str(e)}), 500
 
 
@@ -274,7 +260,7 @@ def subscribe():
         })
         return jsonify({"message": "subscribed"}), 201
     except ClientError as e:
-        log.error("DynamoDB error on subscribe: %s", e)
+        log.error("DynamoDB subscribe error: %s", e)
         return jsonify({"error": str(e)}), 500
 
 
@@ -294,9 +280,13 @@ def unsubscribe():
         subs_tbl.delete_item(Key={"emailId": email, "title_album": title_album})
         return jsonify({"message": "unsubscribed"}), 200
     except ClientError as e:
-        log.error("DynamoDB error on unsubscribe: %s", e)
+        log.error("DynamoDB unsubscribe error: %s", e)
         return jsonify({"error": str(e)}), 500
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Health check
+# ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/health")
 def health():

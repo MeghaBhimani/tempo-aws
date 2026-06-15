@@ -2,458 +2,810 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tempo</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tempo — Discover Music</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
+    :root {
+      --gold:     #a78bfa;
+      --amber:    #c4b5fd;
+      --gold-dim: #7c3aed;
+      --dark:     #0d0b12;
+      --surface:  #13111a;
+      --card:     #1a1726;
+      --card2:    #1e1b2e;
+      --border:   #2d2640;
+      --text:     #ede9f8;
+      --muted:    #8878aa;
+      --sidebar-w: 260px;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --bg:        #07070f;
-      --surface:   rgba(255,255,255,0.04);
-      --surface2:  rgba(255,255,255,0.07);
-      --surface3:  rgba(255,255,255,0.03);
-      --border:    rgba(255,255,255,0.08);
-      --border-hi: rgba(139,92,246,0.45);
-      --primary:   #8b5cf6;
-      --primary-2: #ec4899;
-      --accent:    #06b6d4;
-      --text:      #f1f0ff;
-      --text-2:    #a5a3b5;
-      --muted:     #6b7280;
-      --error:     #f87171;
-      --success:   #34d399;
-      --radius:    12px;
+    body {
+      min-height: 100vh;
+      background: var(--dark);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text);
+      display: flex;
     }
 
-    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-weight: 400; }
-
-    /* Fixed bg gradient */
-    body::before {
-      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-      background:
-        radial-gradient(ellipse 60% 50% at 80% 0%, rgba(124,58,237,0.12) 0%, transparent 70%),
-        radial-gradient(ellipse 50% 40% at 10% 100%, rgba(236,72,153,0.08) 0%, transparent 70%);
+    /* ══════════════════ SIDEBAR ══════════════════ */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 32px 24px;
+      position: fixed;
+      top: 0;
+      left: 0;
     }
 
-    /* ── Navbar ── */
-    nav {
-      position: sticky; top: 0; z-index: 100;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0.85rem 2rem;
-      background: rgba(7,7,15,0.8); backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
-    }
-    .nav-brand { display: flex; align-items: center; gap: 0.65rem; }
-    .nav-logo {
-      display: flex; align-items: center; justify-content: center;
-      width: 34px; height: 34px; border-radius: 10px;
-      background: linear-gradient(135deg, #7c3aed, #ec4899);
-      box-shadow: 0 0 16px rgba(139,92,246,0.4);
-      flex-shrink: 0;
-    }
-    .nav-brand h1 {
-      font-size: 1.25rem; font-weight: 800; letter-spacing: -0.03em;
-      background: linear-gradient(135deg, #c4b5fd 0%, #f9a8d4 80%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .nav-right { display: flex; align-items: center; gap: 1.2rem; }
-    .nav-user { font-size: 0.82rem; color: var(--muted); }
-    .nav-user span { color: #c4b5fd; font-weight: 600; }
-    .btn-logout {
-      padding: 0.4rem 0.9rem; border: 1px solid var(--border); border-radius: 8px;
-      background: transparent; color: var(--muted); font-family: 'Inter', sans-serif;
-      font-size: 0.78rem; font-weight: 500; cursor: pointer; transition: all 0.2s;
-      text-decoration: none; letter-spacing: 0.02em;
-    }
-    .btn-logout:hover { border-color: var(--error); color: var(--error); background: rgba(248,113,113,0.06); }
-
-    /* ── Layout ── */
-    .main-grid {
-      position: relative; z-index: 1;
-      display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 1.25rem;
-      padding: 1.25rem 2rem;
-      min-height: calc(100vh - 61px);
+    .brand-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--gold-dim), var(--amber));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
     }
 
-    /* ── Panel ── */
-    .panel {
-      background: rgba(13,12,24,0.7);
+    .brand-tagline {
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 36px;
+    }
+
+    .user-info {
+      background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 1.5rem;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
-    }
-    .panel-header {
-      display: flex; align-items: center; gap: 0.5rem;
-      margin-bottom: 1.25rem;
-    }
-    .panel-icon {
-      display: flex; align-items: center; justify-content: center;
-      width: 32px; height: 32px; border-radius: 9px;
-      background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.2);
-      flex-shrink: 0;
-    }
-    .panel-icon svg { width: 15px; height: 15px; stroke: #a78bfa; fill: none; stroke-width: 2; }
-    .panel-title { font-size: 0.95rem; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
-    .panel-count {
-      margin-left: auto;
-      font-size: 0.72rem; font-weight: 600; color: var(--muted);
-      background: var(--surface2); border: 1px solid var(--border);
-      padding: 0.15rem 0.55rem; border-radius: 99px;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 28px;
     }
 
-    /* ── Song Cards ── */
-    .song-card {
-      display: flex; align-items: center; gap: 0.85rem;
-      padding: 0.8rem; background: var(--surface);
-      border: 1px solid var(--border); border-radius: 12px;
-      margin-bottom: 0.6rem;
-      transition: border-color 0.2s, background 0.2s, transform 0.15s;
-      cursor: default;
-    }
-    .song-card:hover { border-color: rgba(139,92,246,0.3); background: var(--surface2); transform: translateX(2px); }
-
-    .song-art {
-      width: 50px; height: 50px; border-radius: 10px;
-      object-fit: cover; background: var(--surface2);
-      flex-shrink: 0; border: 1px solid var(--border);
-    }
-    .song-art-placeholder {
-      width: 50px; height: 50px; border-radius: 10px;
-      background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(236,72,153,0.2));
-      border: 1px solid rgba(139,92,246,0.2);
-      flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .song-art-placeholder svg { width: 18px; height: 18px; stroke: #a78bfa; fill: none; stroke-width: 1.8; opacity: 0.6; }
-
-    .song-info { flex: 1; min-width: 0; }
-    .song-title { font-size: 0.87rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .song-meta { font-size: 0.73rem; color: var(--muted); margin-top: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .song-year { display: inline-block; background: rgba(139,92,246,0.12); color: #a78bfa; font-size: 0.66rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 4px; margin-left: 0.35rem; }
-
-    /* ── Buttons ── */
-    .btn-action {
-      padding: 0.38rem 0.8rem; border-radius: 8px;
-      font-family: 'Inter', sans-serif; font-size: 0.73rem; font-weight: 600;
-      cursor: pointer; transition: all 0.2s; white-space: nowrap; border: none;
-      letter-spacing: 0.02em;
-    }
-    .btn-action:active { transform: scale(0.95); }
-
-    .btn-subscribe {
-      background: linear-gradient(135deg, #7c3aed, #db2777);
-      color: #fff;
-      box-shadow: 0 2px 12px rgba(124,58,237,0.3);
-    }
-    .btn-subscribe:hover { box-shadow: 0 3px 16px rgba(124,58,237,0.5); opacity: 0.9; }
-
-    .btn-subscribed {
-      background: rgba(52,211,153,0.1); color: var(--success);
-      border: 1px solid rgba(52,211,153,0.25) !important;
-      cursor: default !important;
+    .user-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 4px;
     }
 
-    .btn-remove {
-      background: rgba(248,113,113,0.1); color: var(--error);
-      border: 1px solid rgba(248,113,113,0.25) !important;
+    .user-name {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--gold);
+      word-break: break-all;
     }
-    .btn-remove:hover { background: rgba(248,113,113,0.2); }
 
-    /* ── Search Form ── */
+    .nav-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 10px;
+    }
+
+    .nav-btn {
+      display: block;
+      width: 100%;
+      padding: 10px 14px;
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      margin-bottom: 6px;
+    }
+
+    .nav-btn:hover { background: var(--card); border-color: var(--border); }
+    .nav-btn.active { background: var(--card); border-color: var(--gold-dim); color: var(--gold); }
+
+    .sidebar-footer {
+      margin-top: auto;
+    }
+
+    .logout-btn {
+      display: block;
+      width: 100%;
+      padding: 10px 14px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      text-align: left;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .logout-btn:hover { color: #e07070; border-color: rgba(220,60,60,0.3); }
+
+    /* ══════════════════ MAIN CONTENT ══════════════════ */
+    .content {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      padding: 40px 48px;
+      max-width: 1100px;
+    }
+
+    .page-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .page-subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+
+    /* ══════════════════ SEARCH PANEL ══════════════════ */
+    .search-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      margin-bottom: 36px;
+    }
+
+    .search-panel h2 {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
     .search-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 1rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 18px;
     }
-    .input-group { display: flex; flex-direction: column; gap: 0.35rem; }
-    .input-group label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-    .search-input {
-      padding: 0.7rem 0.9rem;
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius); color: var(--text);
-      font-family: 'Inter', sans-serif; font-size: 0.86rem; outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .search-input::placeholder { color: #374151; }
-    .search-input:focus { border-color: var(--border-hi); box-shadow: 0 0 0 3px rgba(139,92,246,0.1); }
 
-    .btn-search {
-      grid-column: 1 / -1;
-      padding: 0.8rem; border: none; border-radius: var(--radius);
-      background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
-      color: #fff; font-family: 'Inter', sans-serif; font-size: 0.85rem;
-      font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
-      cursor: pointer; transition: opacity 0.2s, box-shadow 0.2s, transform 0.15s;
-      box-shadow: 0 3px 16px rgba(124,58,237,0.35);
-      position: relative; overflow: hidden;
+    .field-group label {
+      display: block;
+      font-size: 0.74rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
     }
-    .btn-search::before {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%);
-      pointer-events: none;
-    }
-    .btn-search:hover { opacity: 0.9; box-shadow: 0 5px 24px rgba(124,58,237,0.5); transform: translateY(-1px); }
-    .btn-search:active { transform: scale(0.98); }
 
-    /* ── States ── */
-    .empty-state {
-      text-align: center; padding: 2.5rem 1rem; color: var(--muted); font-size: 0.84rem;
+    .field-group input {
+      width: 100%;
+      padding: 10px 14px;
+      background: #0f0f0f;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
     }
+
+    .field-group input:focus { border-color: var(--gold-dim); }
+    .field-group input::placeholder { color: #333; }
+
+    .search-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-primary {
+      padding: 10px 24px;
+      background: linear-gradient(135deg, var(--gold-dim), #9d6df5);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-ghost {
+      padding: 10px 18px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-ghost:hover { border-color: var(--gold-dim); color: var(--text); }
+
+    /* ══════════════════ RESULTS ══════════════════ */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+
+    .result-count {
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 10px;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 18px;
+      margin-bottom: 48px;
+    }
+
+    .music-card {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .music-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+      border-color: var(--gold-dim);
+    }
+
+    .music-card img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: #111;
+    }
+
+    .music-card-body {
+      padding: 14px;
+    }
+
+    .music-title {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .music-artist {
+      font-size: 0.78rem;
+      color: var(--amber);
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .music-meta {
+      font-size: 0.73rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sub-btn {
+      width: 100%;
+      padding: 7px;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      border: 1px solid;
+    }
+
+    .sub-btn.subscribe {
+      background: rgba(124,58,237,0.14);
+      border-color: var(--gold-dim);
+      color: var(--amber);
+    }
+
+    .sub-btn.subscribe:hover { background: rgba(124,58,237,0.26); }
+
+    .sub-btn.unsubscribe {
+      background: rgba(220,60,60,0.1);
+      border-color: rgba(220,60,60,0.3);
+      color: #e07070;
+    }
+
+    .sub-btn.unsubscribe:hover { background: rgba(220,60,60,0.18); }
+
+    /* ══════════════════ SUBSCRIPTIONS ══════════════════ */
+    .subs-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      margin-bottom: 48px;
+    }
+
+    .subs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 18px;
+    }
+
+    /* ══════════════════ STATES ══════════════════ */
+    .empty-state, .loading-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
     .empty-state-icon {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 48px; height: 48px; border-radius: 14px;
-      background: var(--surface2); border: 1px solid var(--border);
-      margin-bottom: 1rem;
-    }
-    .empty-state-icon svg { width: 22px; height: 22px; stroke: var(--muted); fill: none; stroke-width: 1.6; }
-    .empty-state p { line-height: 1.6; }
-
-    .alert-error {
-      display: flex; align-items: center; gap: 0.5rem;
-      color: var(--error); font-size: 0.82rem; font-weight: 500;
-      padding: 0.7rem 0.9rem;
-      background: rgba(248,113,113,0.07); border: 1px solid rgba(248,113,113,0.18); border-radius: 10px;
+      font-size: 2.4rem;
+      margin-bottom: 12px;
+      opacity: 0.4;
     }
 
-    /* ── Results ── */
-    .results-area { margin-top: 1rem; max-height: 58vh; overflow-y: auto; padding-right: 2px; }
-    .results-area::-webkit-scrollbar { width: 3px; }
-    .results-area::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); border-radius: 3px; }
+    .error-banner {
+      background: rgba(220,60,60,0.1);
+      border: 1px solid rgba(220,60,60,0.25);
+      border-radius: 8px;
+      color: #e07070;
+      padding: 10px 16px;
+      font-size: 0.85rem;
+      margin-bottom: 18px;
+      display: none;
+    }
 
-    #sub-list { max-height: 72vh; overflow-y: auto; padding-right: 2px; }
-    #sub-list::-webkit-scrollbar { width: 3px; }
-    #sub-list::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); border-radius: 3px; }
+    .error-banner.visible { display: block; }
 
-    /* ── Divider ── */
-    .section-divider {
-      border: none; border-top: 1px solid var(--border);
-      margin: 1rem 0;
+    /* placeholder artwork */
+    .artwork-placeholder {
+      width: 100%;
+      aspect-ratio: 1;
+      background: linear-gradient(135deg, #1e1b2e, #130f1e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      color: #333;
     }
   </style>
 </head>
 <body>
 
-<!-- Navbar -->
-<nav>
-  <div class="nav-brand">
-    <div class="nav-logo">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 18V5l12-2v13"/>
-        <circle cx="6" cy="18" r="3"/>
-        <circle cx="18" cy="16" r="3"/>
-      </svg>
-    </div>
-    <h1>Lyra</h1>
-  </div>
-  <div class="nav-right">
-    <p class="nav-user">Hey, <span>{{ user_name }}</span></p>
-    <a href="/logout" class="btn-logout">Sign out</a>
-  </div>
-</nav>
+  <!-- ════════ SIDEBAR ════════ -->
+  <aside class="sidebar">
+    <div class="brand-name">Tempo</div>
+    <div class="brand-tagline">Your music universe</div>
 
-<!-- Main grid -->
-<div class="main-grid">
-
-  <!-- LEFT: Subscriptions -->
-  <section class="panel">
-    <div class="panel-header">
-      <div class="panel-icon">
-        <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-      </div>
-      <span class="panel-title">My Library</span>
-      <span class="panel-count" id="sub-count">0 tracks</span>
+    <div class="user-info">
+      <div class="user-label">Signed in as</div>
+      <div class="user-name" id="sidebarUser">—</div>
     </div>
 
-    <div id="sub-list">
-      <div class="empty-state">
-        <div class="empty-state-icon">
-          <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    <div class="nav-label">Navigation</div>
+    <button class="nav-btn active" onclick="showSection('search')">🔍 Search Music</button>
+    <button class="nav-btn"        onclick="showSection('subs')">♥ My Subscriptions</button>
+
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="logout()">← Sign out</button>
+    </div>
+  </aside>
+
+  <!-- ════════ CONTENT ════════ -->
+  <main class="content">
+
+    <!-- SEARCH SECTION -->
+    <section id="searchSection">
+      <div class="page-title">Discover Music</div>
+      <div class="page-subtitle">Search by title, artist, year or album — at least one field required</div>
+
+      <div class="search-panel">
+        <h2>Search Filters</h2>
+        <div class="error-banner" id="searchError"></div>
+        <div class="search-grid">
+          <div class="field-group">
+            <label for="fTitle">Title</label>
+            <input type="text" id="fTitle" placeholder="e.g. Blinding Lights" />
+          </div>
+          <div class="field-group">
+            <label for="fArtist">Artist</label>
+            <input type="text" id="fArtist" placeholder="e.g. Taylor Swift" />
+          </div>
+          <div class="field-group">
+            <label for="fYear">Year</label>
+            <input type="number" id="fYear" placeholder="e.g. 2020" min="1900" max="2099" />
+          </div>
+          <div class="field-group">
+            <label for="fAlbum">Album</label>
+            <input type="text" id="fAlbum" placeholder="e.g. Folklore" />
+          </div>
         </div>
-        <p>Your library is empty.<br/>Search and subscribe to songs.</p>
+        <div class="search-actions">
+          <button class="btn-primary" id="searchBtn" onclick="doSearch()">Search</button>
+          <button class="btn-ghost" onclick="clearSearch()">Clear</button>
+        </div>
       </div>
-    </div>
-  </section>
 
-  <!-- RIGHT: Search -->
-  <section class="panel">
-    <div class="panel-header">
-      <div class="panel-icon">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <div id="resultsSection" style="display:none;">
+        <div class="section-header">
+          <span class="section-title">Results</span>
+          <span class="result-count" id="resultCount">0 songs</span>
+        </div>
+        <div class="results-grid" id="resultsGrid"></div>
       </div>
-      <span class="panel-title">Discover Music</span>
-    </div>
+    </section>
 
-    <div class="search-grid">
-      <div class="input-group">
-        <label>Title</label>
-        <input id="q-title" class="search-input" placeholder="e.g. Bohemian Rhapsody" />
+    <!-- SUBSCRIPTIONS SECTION -->
+    <section id="subsSection" style="display:none;">
+      <div class="page-title">My Subscriptions</div>
+      <div class="page-subtitle">Songs you're following</div>
+
+      <div class="subs-panel">
+        <div class="section-header">
+          <span class="section-title">Subscribed Songs</span>
+          <span class="result-count" id="subsCount">—</span>
+        </div>
+        <div id="subsContent">
+          <div class="loading-state">Loading…</div>
+        </div>
       </div>
-      <div class="input-group">
-        <label>Artist</label>
-        <input id="q-artist" class="search-input" placeholder="e.g. Queen" />
-      </div>
-      <div class="input-group">
-        <label>Year</label>
-        <input id="q-year" class="search-input" placeholder="e.g. 1975" />
-      </div>
-      <div class="input-group">
-        <label>Album</label>
-        <input id="q-album" class="search-input" placeholder="e.g. A Night at the Opera" />
-      </div>
-      <button class="btn-search" onclick="queryMusic()">
-        Search
-      </button>
-    </div>
+    </section>
 
-    <div id="query-results"></div>
-  </section>
+  </main>
 
-</div>
+  <script>
+    // ── Change this to your EC2 / ECS ALB / API Gateway URL ──
+    const API_BASE =  "http://ec2-54-92-222-201.compute-1.amazonaws.com";
 
-<script>
-  const EMAIL = "{{ email }}";
-  const songStore = {};
-  const subscribedKeys = new Set();
+    // ── Auth guard ────────────────────────────────────────────
+    let currentEmail    = sessionStorage.getItem("email");
+    let currentUserName = sessionStorage.getItem("user_name");
 
-  function updateSubCount(n) {
-    document.getElementById('sub-count').textContent = n + (n === 1 ? ' track' : ' tracks');
-  }
+    (async () => {
+      // Verify session with server
+      try {
+        const r = await fetch(`${API_BASE}/api/me`, { credentials: "include" });
+        if (!r.ok) {
+          window.location.href = "login.html";
+          return;
+        }
+        const me = await r.json();
+        currentEmail    = me.email;
+        currentUserName = me.user_name;
+        sessionStorage.setItem("email",     currentEmail);
+        sessionStorage.setItem("user_name", currentUserName);
+      } catch (_) {
+        // Network issue — rely on sessionStorage
+        if (!currentEmail) {
+          window.location.href = "login.html";
+          return;
+        }
+      }
+      document.getElementById("sidebarUser").textContent = currentUserName || currentEmail;
+    })();
 
-  async function loadSubscriptions() {
-    const list = document.getElementById('sub-list');
-    list.innerHTML = '<div class="empty-state"><p>Loading…</p></div>';
-    try {
-      const res  = await fetch('/api/subscriptions');
-      const data = await res.json();
-      subscribedKeys.clear();
-      if (!data.items || data.items.length === 0) {
-        updateSubCount(0);
-        list.innerHTML = `<div class="empty-state">
-          <div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
-          <p>Your library is empty.<br/>Search and subscribe to songs.</p>
+    // ── Subscriptions set (for subscribe button state) ────────
+    let subscribedKeys = new Set();
+
+    async function loadSubscriptionKeys() {
+      try {
+        const r = await fetch(`${API_BASE}/api/subscriptions`, { credentials: "include" });
+        if (!r.ok) return;
+        const data = await r.json();
+        subscribedKeys = new Set((data.items || []).map(i => `${i.title}#${i.album}`));
+      } catch (_) {}
+    }
+
+    // ── Navigation ────────────────────────────────────────────
+    function showSection(name) {
+      document.getElementById("searchSection").style.display = name === "search" ? "" : "none";
+      document.getElementById("subsSection").style.display   = name === "subs"   ? "" : "none";
+      document.querySelectorAll(".nav-btn").forEach((b, i) => {
+        b.classList.toggle("active", (i === 0 && name === "search") || (i === 1 && name === "subs"));
+      });
+      if (name === "subs") loadSubscriptions();
+    }
+
+    // ── Logout ────────────────────────────────────────────────
+    async function logout() {
+      try {
+        await fetch(`${API_BASE}/api/logout`, { method: "POST", credentials: "include" });
+      } catch (_) {}
+      sessionStorage.clear();
+      window.location.href = "login.html";
+    }
+
+    // ── Search ────────────────────────────────────────────────
+    async function doSearch() {
+      const title  = document.getElementById("fTitle").value.trim();
+      const artist = document.getElementById("fArtist").value.trim();
+      const year   = document.getElementById("fYear").value.trim();
+      const album  = document.getElementById("fAlbum").value.trim();
+
+      const errorEl = document.getElementById("searchError");
+      errorEl.classList.remove("visible");
+
+      if (!title && !artist && !year && !album) {
+        errorEl.textContent = "Please fill in at least one search field.";
+        errorEl.classList.add("visible");
+        return;
+      }
+
+      const btn = document.getElementById("searchBtn");
+      btn.disabled = true;
+      btn.textContent = "Searching…";
+
+      await loadSubscriptionKeys();
+
+      try {
+        const params = new URLSearchParams();
+        if (title)  params.set("title",  title);
+        if (artist) params.set("artist", artist);
+        if (year)   params.set("year",   year);
+        if (album)  params.set("album",  album);
+
+        const r = await fetch(`${API_BASE}/api/query?${params}`, { credentials: "include" });
+
+        if (r.status === 401) { window.location.href = "login.html"; return; }
+
+        const data = await r.json();
+
+        if (!r.ok) {
+          errorEl.textContent = data.error || "Search failed. Try again.";
+          errorEl.classList.add("visible");
+          return;
+        }
+
+        renderResults(data.items || []);
+
+      } catch (err) {
+        errorEl.textContent = "Network error. Check your connection.";
+        errorEl.classList.add("visible");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Search";
+      }
+    }
+
+    function clearSearch() {
+      ["fTitle","fArtist","fYear","fAlbum"].forEach(id => { document.getElementById(id).value = ""; });
+      document.getElementById("resultsSection").style.display = "none";
+      document.getElementById("searchError").classList.remove("visible");
+    }
+
+    // Allow Enter key in search fields
+    ["fTitle","fArtist","fYear","fAlbum"].forEach(id => {
+      document.addEventListener("DOMContentLoaded", () => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
+      });
+    });
+
+    function renderResults(items) {
+      const section = document.getElementById("resultsSection");
+      const grid    = document.getElementById("resultsGrid");
+      const count   = document.getElementById("resultCount");
+
+      section.style.display = "";
+      count.textContent = `${items.length} song${items.length !== 1 ? "s" : ""}`;
+
+      if (items.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1">
+            <div class="empty-state-icon">🎵</div>
+            No songs matched your search. Try different filters.
+          </div>`;
+        return;
+      }
+
+      grid.innerHTML = items.map(item => musicCardHTML(item, false)).join("");
+    }
+
+    // ── Subscriptions ─────────────────────────────────────────
+    async function loadSubscriptions() {
+      const content  = document.getElementById("subsContent");
+      const countEl  = document.getElementById("subsCount");
+      content.innerHTML = `<div class="loading-state">Loading your subscriptions…</div>`;
+
+      try {
+        const r = await fetch(`${API_BASE}/api/subscriptions`, { credentials: "include" });
+        if (r.status === 401) { window.location.href = "login.html"; return; }
+        const data = await r.json();
+        const items = data.items || [];
+
+        subscribedKeys = new Set(items.map(i => `${i.title}#${i.album}`));
+        countEl.textContent = `${items.length} song${items.length !== 1 ? "s" : ""}`;
+
+        if (items.length === 0) {
+          content.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">♥</div>
+              You haven't subscribed to any songs yet.<br>Search for music and hit Subscribe.
+            </div>`;
+          return;
+        }
+
+        content.innerHTML = `<div class="subs-grid">${items.map(i => musicCardHTML(i, true)).join("")}</div>`;
+
+      } catch (err) {
+        content.innerHTML = `<div class="empty-state">Failed to load subscriptions. Try again.</div>`;
+      }
+    }
+
+    // ── Card HTML ─────────────────────────────────────────────
+    function musicCardHTML(item, inSubsView) {
+      const key         = `${item.title}#${item.album}`;
+      const isSubbed    = inSubsView || subscribedKeys.has(key);
+      const safeTitle   = escHtml(item.title  || "Unknown Title");
+      const safeArtist  = escHtml(item.artist || "Unknown Artist");
+      const safeAlbum   = escHtml(item.album  || "");
+      const safeYear    = escHtml(String(item.year || ""));
+      const imgUrl      = item.image_url || item.img_url || "";
+      const dataJson    = escAttr(JSON.stringify({
+        title:     item.title  || "",
+        artist:    item.artist || "",
+        album:     item.album  || "",
+        year:      item.year   || "",
+        image_url: imgUrl,
+      }));
+
+      const artwork = imgUrl
+        ? `<img src="${escAttr(imgUrl)}" alt="${safeTitle}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=artwork-placeholder>♪</div>'">`
+        : `<div class="artwork-placeholder">♪</div>`;
+
+      const btnLabel = isSubbed ? "✓ Unsubscribe" : "+ Subscribe";
+      const btnClass = isSubbed ? "sub-btn unsubscribe" : "sub-btn subscribe";
+      const btnFn    = isSubbed ? `removeSub(this,'${escAttr(item.title||"")}','${escAttr(item.album||"")}')` : `addSub(this,'${dataJson}')`;
+
+      return `
+        <div class="music-card">
+          ${artwork}
+          <div class="music-card-body">
+            <div class="music-title"  title="${safeTitle}">${safeTitle}</div>
+            <div class="music-artist" title="${safeArtist}">${safeArtist}</div>
+            <div class="music-meta">${[safeAlbum, safeYear].filter(Boolean).join(" · ")}</div>
+            <button class="${btnClass}" onclick="${btnFn}">${btnLabel}</button>
+          </div>
         </div>`;
-      } else {
-        data.items.forEach(s => {
-          const key = `${s.title}||${s.artist}`;
-          subscribedKeys.add(key);
-          songStore[key] = s;
+    }
+
+    // ── Subscribe ─────────────────────────────────────────────
+    async function addSub(btn, jsonStr) {
+      const item = JSON.parse(jsonStr);
+      btn.disabled = true;
+      btn.textContent = "…";
+
+      try {
+        const r = await fetch(`${API_BASE}/api/subscribe`, {
+          method:      "POST",
+          credentials: "include",
+          headers:     { "Content-Type": "application/json" },
+          body:        JSON.stringify(item),
         });
-        updateSubCount(data.items.length);
-        list.innerHTML = data.items.map(s => songCard(s, 'remove')).join('');
+
+        if (r.status === 401) { window.location.href = "login.html"; return; }
+
+        if (r.ok) {
+          subscribedKeys.add(`${item.title}#${item.album}`);
+          btn.textContent = "✓ Unsubscribe";
+          btn.className   = "sub-btn unsubscribe";
+          const dataJson  = escAttr(JSON.stringify(item));
+          btn.setAttribute("onclick", `removeSub(this,'${escAttr(item.title)}','${escAttr(item.album)}')`);
+        } else {
+          btn.textContent = "Error";
+          setTimeout(() => { btn.disabled = false; btn.textContent = "+ Subscribe"; }, 2000);
+        }
+      } catch (_) {
+        btn.textContent = "Error";
+        setTimeout(() => { btn.disabled = false; btn.textContent = "+ Subscribe"; }, 2000);
       }
-    } catch(e) {
-      list.innerHTML = '<div class="empty-state"><p>Could not load subscriptions.</p></div>';
-    }
-  }
-
-  async function queryMusic() {
-    const title   = document.getElementById('q-title').value.trim();
-    const artist  = document.getElementById('q-artist').value.trim();
-    const year    = document.getElementById('q-year').value.trim();
-    const album   = document.getElementById('q-album').value.trim();
-    const results = document.getElementById('query-results');
-
-    if (!title && !artist && !year && !album) {
-      results.innerHTML = '<div class="alert-error"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Fill in at least one field.</div>';
-      return;
     }
 
-    results.innerHTML = '<div class="empty-state"><p>Searching…</p></div>';
-    const params = new URLSearchParams();
-    if (title)  params.append('title', title);
-    if (artist) params.append('artist', artist);
-    if (year)   params.append('year', year);
-    if (album)  params.append('album', album);
+    // ── Unsubscribe ───────────────────────────────────────────
+    async function removeSub(btn, title, album) {
+      btn.disabled = true;
+      btn.textContent = "…";
 
-    try {
-      const res  = await fetch(`/api/query?${params}`);
-      const data = await res.json();
-      if (!data.items || data.items.length === 0) {
-        results.innerHTML = '<div class="alert-error"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>No results found. Try different search terms.</div>';
-      } else {
-        results.innerHTML = '<div class="results-area">' + data.items.map(s => songCard(s, 'subscribe')).join('') + '</div>';
+      try {
+        const r = await fetch(`${API_BASE}/api/unsubscribe`, {
+          method:      "DELETE",
+          credentials: "include",
+          headers:     { "Content-Type": "application/json" },
+          body:        JSON.stringify({ title, album }),
+        });
+
+        if (r.status === 401) { window.location.href = "login.html"; return; }
+
+        if (r.ok) {
+          subscribedKeys.delete(`${title}#${album}`);
+          // If we're in the subs panel, remove the card
+          const subsSection = document.getElementById("subsSection");
+          if (subsSection.style.display !== "none") {
+            const card = btn.closest(".music-card");
+            if (card) {
+              card.style.opacity = "0";
+              card.style.transition = "opacity 0.3s";
+              setTimeout(() => { card.remove(); refreshSubsCount(); }, 300);
+            }
+          } else {
+            btn.textContent = "+ Subscribe";
+            btn.className   = "sub-btn subscribe";
+            const escaped = escAttr(JSON.stringify({ title, album }));
+            btn.setAttribute("onclick", `addSub(this,'${escaped}')`);
+            btn.disabled = false;
+          }
+        } else {
+          btn.disabled = false;
+          btn.textContent = "✓ Unsubscribe";
+        }
+      } catch (_) {
+        btn.disabled = false;
+        btn.textContent = "✓ Unsubscribe";
       }
-    } catch(e) {
-      results.innerHTML = '<div class="alert-error"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Query failed. Check your connection.</div>';
     }
-  }
 
-  async function subscribe(key, btn) {
-    const s = songStore[key];
-    if (!s) return;
-    btn.disabled = true;
-    btn.textContent = '…';
-    const res = await fetch('/api/subscribe', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ title: s.title, artist: s.artist, year: s.year || '', album: s.album || '', image_url: s.image_url || '' })
-    });
-    if (res.ok) {
-      btn.className = 'btn-action btn-subscribed';
-      btn.textContent = '✓ Saved';
-      subscribedKeys.add(key);
-      loadSubscriptions();
-    } else {
-      btn.disabled = false;
-      btn.textContent = 'Subscribe';
-    }
-  }
-
-  async function unsubscribe(key, btn) {
-    const s = songStore[key];
-    if (!s) return;
-    btn.disabled = true;
-    const res = await fetch('/api/unsubscribe', {
-      method: 'DELETE',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({title: s.title, album: s.album || ''})
-    });
-    if (res.ok) { subscribedKeys.delete(key); loadSubscriptions(); }
-    else { btn.disabled = false; }
-  }
-
-  function songCard(s, action) {
-    const key = `${s.title}||${s.artist}`;
-    songStore[key] = s;
-    const safeKey = esc(key);
-    let btn;
-    if (action === 'subscribe') {
-      if (subscribedKeys.has(key)) {
-        btn = `<button class="btn-action btn-subscribed" disabled>✓ Saved</button>`;
-      } else {
-        btn = `<button class="btn-action btn-subscribe" onclick="subscribe('${safeKey}', this)">Subscribe</button>`;
+    function refreshSubsCount() {
+      const cards = document.querySelectorAll("#subsContent .music-card");
+      const countEl = document.getElementById("subsCount");
+      countEl.textContent = `${cards.length} song${cards.length !== 1 ? "s" : ""}`;
+      if (cards.length === 0) {
+        document.getElementById("subsContent").innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">♥</div>
+            You have no subscriptions. Search for music to add some!
+          </div>`;
       }
-    } else {
-      btn = `<button class="btn-action btn-remove" onclick="unsubscribe('${safeKey}', this)">Remove</button>`;
     }
 
-    const imgSrc = s.image_url || '';
-    const artHtml = imgSrc
-      ? `<img class="song-art" src="${esc(imgSrc)}" alt="${esc(s.artist)}" onerror="this.outerHTML='<div class=\\'song-art-placeholder\\'><svg viewBox=\\'0 0 24 24\\'><path d=\\'M9 18V5l12-2v13\\'/><circle cx=\\'6\\' cy=\\'18\\' r=\\'3\\'/><circle cx=\\'18\\' cy=\\'16\\' r=\\'3\\'/></svg></div>'" />`
-      : `<div class="song-art-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`;
+    // ── Utilities ─────────────────────────────────────────────
+    function escHtml(str) {
+      return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
 
-    const yearBadge = s.year ? `<span class="song-year">${esc(String(s.year))}</span>` : '';
-    const albumText = s.album ? `${esc(s.album)} ` : '';
+    function escAttr(str) {
+      return String(str).replace(/'/g,"&#39;").replace(/"/g,"&quot;");
+    }
 
-    return `
-      <div class="song-card">
-        ${artHtml}
-        <div class="song-info">
-          <div class="song-title">${esc(s.title)}</div>
-          <div class="song-meta">${esc(s.artist)} &middot; ${albumText}${yearBadge}</div>
-        </div>
-        ${btn}
-      </div>`;
-  }
-
-  function esc(str) {
-    return String(str || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
-  window.onload = loadSubscriptions;
-</script>
+    // Load subscription keys on page ready
+    loadSubscriptionKeys();
+  </script>
 </body>
 </html>
