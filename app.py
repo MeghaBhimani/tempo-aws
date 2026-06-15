@@ -11,7 +11,7 @@ import boto3
 import bcrypt
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key, Attr
-from flask import Flask, request, session, jsonify
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -22,11 +22,7 @@ log = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", "tempo")
 
-CORS(
-    app,
-    origins=os.environ.get("ALLOWED_ORIGIN", "*"),
-    supports_credentials=True,
-)
+CORS(app, origins="*")
 
 # ── AWS config ────────────────────────────────────────────────────────────────
 REGION = os.environ.get("AWS_REGION", "us-east-1")
@@ -46,16 +42,6 @@ def valid_email(email: str) -> bool:
 def _image_url(raw_url: str) -> str:
     """Return image URL as stored — iTunes URLs are passed through unchanged."""
     return raw_url or ""
-
-# ── Auth decorator (returns 401 JSON — no redirect) ───────────────────────────
-def login_required(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if "email" not in session:
-            return jsonify({"error": "unauthorized"}), 401
-        return f(*args, **kwargs)
-    return wrapper
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Auth API
@@ -92,9 +78,7 @@ def api_login():
     if not password_ok:
         return jsonify({"error": "Email or password is invalid"}), 401
 
-    session["email"]     = email
-    session["user_name"] = user.get("user_name", email)
-    return jsonify({"success": True, "email": email, "user_name": session["user_name"]}), 200
+    return jsonify({"success": True, "email": email, "user_name": user.get("user_name", email)}), 200
 
 
 @app.route("/api/register", methods=["POST"])
@@ -133,16 +117,7 @@ def api_register():
 
 @app.route("/api/logout", methods=["POST"])
 def api_logout():
-    session.clear()
     return jsonify({"success": True}), 200
-
-
-@app.route("/api/me", methods=["GET"])
-def api_me():
-    """Check if the current session is authenticated."""
-    if "email" not in session:
-        return jsonify({"error": "unauthorized"}), 401
-    return jsonify({"email": session["email"], "user_name": session["user_name"]}), 200
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -150,7 +125,6 @@ def api_me():
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/api/query", methods=["GET"])
-@login_required
 def query_music():
     title  = request.args.get("title",  "").strip()
     artist = request.args.get("artist", "").strip()
@@ -217,9 +191,10 @@ def query_music():
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/api/subscriptions", methods=["GET"])
-@login_required
 def get_subscriptions():
-    email = session["email"]
+    email = request.args.get("email", "").strip()
+    if not email:
+        return jsonify({"error": "email required"}), 400
     try:
         result = subs_tbl.query(KeyConditionExpression=Key("emailId").eq(email))
         items  = result.get("Items", [])
@@ -233,17 +208,16 @@ def get_subscriptions():
 
 
 @app.route("/api/subscribe", methods=["POST"])
-@login_required
 def subscribe():
     data      = request.get_json() or {}
-    email     = session["email"]
+    email     = data.get("email",     "").strip()
     artist    = data.get("artist",    "").strip()
     title     = data.get("title",     "").strip()
     album     = data.get("album",     "").strip()
     year      = data.get("year",      "")
     image_url = data.get("image_url", "").strip()
 
-    if not artist or not title:
+    if not email or not artist or not title:
         return jsonify({"error": "missing_fields"}), 400
 
     title_album = f"{title}#{album}"
@@ -265,15 +239,14 @@ def subscribe():
 
 
 @app.route("/api/unsubscribe", methods=["DELETE"])
-@login_required
 def unsubscribe():
     data        = request.get_json() or {}
-    email       = session["email"]
+    email       = data.get("email", "").strip()
     title       = data.get("title", "").strip()
     album       = data.get("album", "").strip()
     title_album = f"{title}#{album}"
 
-    if not title:
+    if not email or not title:
         return jsonify({"error": "missing_fields"}), 400
 
     try:
