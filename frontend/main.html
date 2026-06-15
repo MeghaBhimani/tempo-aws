@@ -500,24 +500,22 @@
     let currentUserName = sessionStorage.getItem("user_name");
 
     (async () => {
-      // Verify session with server
+      if (!currentEmail) {
+        window.location.href = "login.html";
+        return;
+      }
       try {
-        const r = await fetch(`${API_BASE}/api/me`, { credentials: "include" });
+        const r = await fetch(`${API_BASE}/api/me?email=${encodeURIComponent(currentEmail)}`);
         if (!r.ok) {
+          sessionStorage.clear();
           window.location.href = "login.html";
           return;
         }
         const me = await r.json();
-        currentEmail    = me.email;
         currentUserName = me.user_name;
-        sessionStorage.setItem("email",     currentEmail);
         sessionStorage.setItem("user_name", currentUserName);
       } catch (_) {
-        // Network issue — rely on sessionStorage
-        if (!currentEmail) {
-          window.location.href = "login.html";
-          return;
-        }
+        // Network issue — trust sessionStorage
       }
       document.getElementById("sidebarUser").textContent = currentUserName || currentEmail;
     })();
@@ -527,7 +525,7 @@
 
     async function loadSubscriptionKeys() {
       try {
-        const r = await fetch(`${API_BASE}/api/subscriptions`, { credentials: "include" });
+        const r = await fetch(`${API_BASE}/api/subscriptions?email=${encodeURIComponent(currentEmail)}`);
         if (!r.ok) return;
         const data = await r.json();
         subscribedKeys = new Set((data.items || []).map(i => `${i.title}#${i.album}`));
@@ -547,7 +545,7 @@
     // ── Logout ────────────────────────────────────────────────
     async function logout() {
       try {
-        await fetch(`${API_BASE}/api/logout`, { method: "POST", credentials: "include" });
+        await fetch(`${API_BASE}/api/logout`, { method: "POST" });
       } catch (_) {}
       sessionStorage.clear();
       window.location.href = "login.html";
@@ -582,9 +580,8 @@
         if (year)   params.set("year",   year);
         if (album)  params.set("album",  album);
 
-        const r = await fetch(`${API_BASE}/api/query?${params}`, { credentials: "include" });
+        const r = await fetch(`${API_BASE}/api/query?${params}`);
 
-        if (r.status === 401) { window.location.href = "login.html"; return; }
 
         const data = await r.json();
 
@@ -646,8 +643,7 @@
       content.innerHTML = `<div class="loading-state">Loading your subscriptions…</div>`;
 
       try {
-        const r = await fetch(`${API_BASE}/api/subscriptions`, { credentials: "include" });
-        if (r.status === 401) { window.location.href = "login.html"; return; }
+        const r = await fetch(`${API_BASE}/api/subscriptions?email=${encodeURIComponent(currentEmail)}`);
         const data = await r.json();
         const items = data.items || [];
 
@@ -715,13 +711,10 @@
 
       try {
         const r = await fetch(`${API_BASE}/api/subscribe`, {
-          method:      "POST",
-          credentials: "include",
-          headers:     { "Content-Type": "application/json" },
-          body:        JSON.stringify(item),
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ ...item, email: currentEmail }),
         });
-
-        if (r.status === 401) { window.location.href = "login.html"; return; }
 
         if (r.ok) {
           subscribedKeys.add(`${item.title}#${item.album}`);
@@ -746,13 +739,10 @@
 
       try {
         const r = await fetch(`${API_BASE}/api/unsubscribe`, {
-          method:      "DELETE",
-          credentials: "include",
-          headers:     { "Content-Type": "application/json" },
-          body:        JSON.stringify({ title, album }),
+          method:  "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ email: currentEmail, title, album }),
         });
-
-        if (r.status === 401) { window.location.href = "login.html"; return; }
 
         if (r.ok) {
           subscribedKeys.delete(`${title}#${album}`);
