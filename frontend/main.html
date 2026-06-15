@@ -505,7 +505,7 @@
         return;
       }
       try {
-        const r = await fetch(`${API_BASE}/api/me?email=${encodeURIComponent(currentEmail)}`);
+        const r = await fetch(`${API_BASE}`);
         if (!r.ok) {
           sessionStorage.clear();
           window.location.href = "login.html";
