@@ -142,43 +142,57 @@ def query_music():
     if not any([title, artist, year, album]):
         return jsonify({"error": "at_least_one_field_required"}), 400
 
-    year_val = None
-    if year:
-        try:
-            year_val = int(year)
-        except ValueError:
-            return jsonify({"error": "year must be a number"}), 400
+    # Year is stored as String in DynamoDB (ScalarAttributeType.S in Java schema)
+    year_str = str(year) if year else None
+    if year and not year.isdigit():
+        return jsonify({"error": "year must be a number"}), 400
 
     try:
-        if artist and not title and not year and not album:
-            # Efficient key-based query on partition key
-            result = music_tbl.query(KeyConditionExpression=Key("artist").eq(artist))
+        def paginate(fn, **kwargs):
+            """Run a query/scan and follow pagination tokens."""
+            result = fn(**kwargs)
             items  = result.get("Items", [])
             while "LastEvaluatedKey" in result:
-                result = music_tbl.query(
-                    KeyConditionExpression=Key("artist").eq(artist),
-                    ExclusiveStartKey=result["LastEvaluatedKey"],
-                )
+                result = fn(**kwargs, ExclusiveStartKey=result["LastEvaluatedKey"])
                 items.extend(result.get("Items", []))
+            return items
+
+        # ── Case 1: artist only → base table query (most efficient) ──────────
+        if artist and not title and not year_str and not album:
+            items = paginate(music_tbl.query,
+                KeyConditionExpression=Key("artist").eq(artist))
+
+        # ── Case 2: artist + album → LSI album_index ─────────────────────────
+        elif artist and album and not title and not year_str:
+            items = paginate(music_tbl.query,
+                IndexName="album_index",
+                KeyConditionExpression=Key("artist").eq(artist) & Key("album").eq(album))
+
+        # ── Case 3: year only → GSI year_index ───────────────────────────────
+        elif year_str and not artist and not title and not album:
+            items = paginate(music_tbl.query,
+                IndexName="year_index",
+                KeyConditionExpression=Key("year").eq(year_str))
+
+        # ── Case 4: year + artist → GSI year_index with filter ───────────────
+        elif year_str and artist and not title and not album:
+            items = paginate(music_tbl.query,
+                IndexName="year_index",
+                KeyConditionExpression=Key("year").eq(year_str) & Key("artist").eq(artist))
+
+        # ── Case 5: all other combinations → scan with filter ─────────────────
         else:
             conditions = []
-            if title:                conditions.append(Attr("title").eq(title))
-            if artist:               conditions.append(Attr("artist").eq(artist))
-            if year_val is not None: conditions.append(Attr("year").eq(year_val) | Attr("year").eq(str(year_val)))
-            if album:                conditions.append(Attr("album").eq(album))
+            if title:    conditions.append(Attr("title").eq(title))
+            if artist:   conditions.append(Attr("artist").eq(artist))
+            if year_str: conditions.append(Attr("year").eq(year_str))
+            if album:    conditions.append(Attr("album").eq(album))
 
             filter_expr = conditions[0]
             for c in conditions[1:]:
                 filter_expr = filter_expr & c
 
-            result = music_tbl.scan(FilterExpression=filter_expr)
-            items  = result.get("Items", [])
-            while "LastEvaluatedKey" in result:
-                result = music_tbl.scan(
-                    FilterExpression=filter_expr,
-                    ExclusiveStartKey=result["LastEvaluatedKey"],
-                )
-                items.extend(result.get("Items", []))
+            items = paginate(music_tbl.scan, FilterExpression=filter_expr)
 
         for item in items:
             if "image_url" in item:
@@ -318,9 +332,3 @@ def method_not_allowed(e):
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-import awsgi
-
-def handler(event, context):
-    return awsgi.response(app, event, context,
-        base64_content_types={"image/jpeg","image/png","image/gif","image/webp"})
