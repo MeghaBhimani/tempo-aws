@@ -4,3 +4,4 @@ boto3
 bcrypt
 python-dotenv
 gunicorn
+aws-wsgi

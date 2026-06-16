@@ -164,7 +164,7 @@ def query_music():
             conditions = []
             if title:                conditions.append(Attr("title").eq(title))
             if artist:               conditions.append(Attr("artist").eq(artist))
-            if year_val is not None: conditions.append(Attr("year").eq(year_val))
+            if year_val is not None: conditions.append(Attr("year").eq(year_val) | Attr("year").eq(str(year_val)))
             if album:                conditions.append(Attr("album").eq(album))
 
             filter_expr = conditions[0]
@@ -318,3 +318,9 @@ def method_not_allowed(e):
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+import awsgi
+
+def handler(event, context):
+    return awsgi.response(app, event, context,
+        base64_content_types={"image/jpeg","image/png","image/gif","image/webp"})
