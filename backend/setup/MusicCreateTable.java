@@ -56,7 +56,7 @@ public class MusicCreateTable {
                             )
                             .withProjection(new Projection().withProjectionType(ProjectionType.ALL))
                             .withProvisionedThroughput(new ProvisionedThroughput(5L, 5L))
-                    )..withBillingMode(BillingMode.PAY_PER_REQUEST));
+                    ).withBillingMode(BillingMode.PAY_PER_REQUEST));
 
 
             Table table = dynamoDB.createTable(request);

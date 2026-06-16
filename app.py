@@ -151,9 +151,11 @@ def query_music():
         def paginate(fn, **kwargs):
             """Run a query/scan and follow pagination tokens."""
             result = fn(**kwargs)
-            items  = result.get("Items", [])
+            items  = list(result.get("Items", []))
             while "LastEvaluatedKey" in result:
-                result = fn(**kwargs, ExclusiveStartKey=result["LastEvaluatedKey"])
+                kw = dict(kwargs)
+                kw["ExclusiveStartKey"] = result["LastEvaluatedKey"]
+                result = fn(**kw)
                 items.extend(result.get("Items", []))
             return items
 
