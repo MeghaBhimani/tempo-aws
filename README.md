@@ -120,6 +120,22 @@ Three DynamoDB tables:
 
 The sort key is `title#album` rather than `title` alone because the dataset contains duplicate song titles across different albums by the same artist (e.g. live versions, re-releases). Using the composite key guarantees uniqueness.
 
+**Indexes:**
+
+| Index | Type | Partition Key | Sort Key | Used for |
+|-------|------|--------------|----------|----------|
+| Base table | — | `artist` | `title_album` | Query all songs by artist |
+| `album_index` | LSI | `artist` | `album` | Query albums by a specific artist |
+| `year_index` | GSI | `year` (String) | `artist` | Query all songs from a given year |
+
+The Flask API routes each query to the most efficient index:
+
+- **Artist only** → base table `query` on partition key
+- **Artist + album** → `album_index` LSI query
+- **Year only** → `year_index` GSI query
+- **Year + artist** → `year_index` GSI query with sort key condition
+- **Title or any other combination** → scan with filter expression
+  
 ### Subscription
 | Attribute | Type | Role |
 |-----------|------|------|
