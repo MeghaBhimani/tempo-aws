@@ -115,7 +115,7 @@ Three DynamoDB tables:
 | `title_album` | String | Sort key (`title#album`) |
 | `title` | String | Song title |
 | `album` | String | Album name |
-| `year` | Number | Release year |
+| `year` | String | Release year |
 | `image_url` | String | S3 artwork URL |
 
 The sort key is `title#album` rather than `title` alone because the dataset contains duplicate song titles across different albums by the same artist (e.g. live versions, re-releases). Using the composite key guarantees uniqueness.
