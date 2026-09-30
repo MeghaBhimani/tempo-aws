@@ -9,7 +9,7 @@ A full-stack music subscription app built on AWS. Users can register, search a m
 - Subscribe and unsubscribe to tracks
 - Album artwork stored in private S3 bucket, served via Flask image proxy
 - Stateless REST API — auth via sessionStorage (no server-side sessions)
-- CORS-enabled for S3-hosted frontend
+- CORS enabled for all origins (development setting, see Known Limitations)
 
 ## Tech Stack
 
@@ -48,7 +48,6 @@ tempo-aws/
 | `FLASK_SECRET` | Flask secret key |
 | `S3_BUCKET` | S3 bucket name for artwork (private) |
 | `API_ORIGIN` | Public URL of the API (EC2, ALB, or API Gateway) |
-| `ALLOWED_ORIGIN` | S3 website URL for CORS |
 | `AWS_REGION` | AWS region (default: us-east-1) |
 
 ```bash
@@ -150,7 +149,7 @@ Subscription data is denormalised — all display fields are stored at write tim
 ```
 Browser (S3 static website)
         │
-        │  HTTPS
+        │  HTTP
         ▼
 ┌───────────────────┐
 │  EC2 / ALB+ECS /  │   ← three interchangeable deployment targets
@@ -174,6 +173,12 @@ Browser (S3 static website)
 
 All three deployment targets run the same `app.py` with no code changes. The only difference is how the process is started (gunicorn, ECS task, or Lambda handler) and where environment variables are injected.
 
+## Known Limitations
+
+- **CORS is open to all origins** (`origins="*"`). This was kept for simplicity while the
+  frontend and API are on different domains. In production, restrict it to the frontend's
+  domain.
+  
 ## Why Flask Image Proxy?
 
 Artwork is stored in a private S3 bucket. Rather than making the bucket public or using presigned URLs (which expire and cause broken images), the `/api/image` endpoint fetches the object from S3 internally and streams it to the browser. This gives permanent, stable image URLs while keeping the bucket private and avoiding any frontend logic to handle URL expiry.
