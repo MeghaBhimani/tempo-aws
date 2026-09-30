@@ -1,4 +1,4 @@
-# Recommended Production Architecture
+# Proposed Production Architecture
 
 This document describes the alternate approaches for the Tempo cloud based music application.
 
@@ -32,13 +32,13 @@ GitHub (main branch) → Amplify auto-deploy → HTTPS CDN → Browser
 | Custom domain | Manual Route 53 setup | Built-in |
 | Cost | Near zero | Free tier: 5 GB storage, 15 GB bandwidth/month |
 
-**Why this matters:** The current HTTP frontend cannot make fetch calls to HTTPS API endpoints (mixed content policy). Amplify gives HTTPS automatically, which also unlocks secure cookie-based auth.
+**Why this matters:** Browsers block an HTTPS page from calling an HTTP API. Moving the frontend to HTTPS(Amplify) means the API must also be HTTPS. API Gateway provides this by default.EC2 or an ALB would need a certificate (ACM).
 
 ---
 
 ### 2. CloudFront + S3 OAC to Replace the Flask Image Proxy
 
-The Flask `/api/image` proxy exists because the S3 bucket cannot be made public (Academy SCP). In production, CloudFront with Origin Access Control (OAC) solves this properly:
+The Music table stores full S3 URLs, so the helper must change, not disappear. It shouldbuild the CloudFront URL from the stored key, or the table should be migrated to store keys only. The /api/image endpoint can then be removed.
 
 ```
 Browser → CloudFront (HTTPS) → S3 private bucket (OAC) → artwork/
@@ -57,17 +57,19 @@ The Flask `/api/image` endpoint and `_image_url()` helper can be removed entirel
 ### 3. Secure Auth with HTTPS Cookies
 
 With Amplify providing HTTPS on the frontend:
-- Replace `sessionStorage` with Flask server-side sessions
-- Set `SESSION_COOKIE_SECURE=True`, `SESSION_COOKIE_SAMESITE=Lax`, `SESSION_COOKIE_HTTPONLY=True`
-- Auth state survives page refresh without re-login
 - `HttpOnly` flag prevents JavaScript from reading the session cookie (XSS protection)
+- SameSite=Lax would block the cookie on cross-site API calls, so None (with Secure) is needed unless the frontend and API share one domain.
+- CORS must list the exact frontend origin. A wildcard does not work with cookies.
+- FLASK_SECRET must be a long random value, identical on every instance.
+- Every protected route must check the session. Today the API trusts the email in the request, so anyone can read anyone's subscriptions.
 
 ```python
 app.config.update(
     SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SAMESITE="None",   # frontend and API are on different domains
     SESSION_COOKIE_HTTPONLY=True,
 )
+CORS(app, origins=[ALLOWED_ORIGIN], supports_credentials=True)
 ```
 
 ---
